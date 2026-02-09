@@ -8,7 +8,8 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceLine
 } from 'recharts';
 import { ScbColumn, ScbDataEntry, MunicipalityNameMap } from '@/types';
 
@@ -93,7 +94,8 @@ const DetailsChart = ({ selectedMunicipalities, data, columns, dataType, municip
             }}
           >
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-            <XAxis 
+            <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
+            <XAxis  
               dataKey="year" 
               tick={{fontSize: 12}}
               tickMargin={10}
@@ -101,8 +103,10 @@ const DetailsChart = ({ selectedMunicipalities, data, columns, dataType, municip
             <YAxis 
               tick={{fontSize: 12}}
               tickFormatter={(value) => value.toLocaleString()}
+              domain={['auto', 'auto']}
+              allowDataOverflow={false}
             />
-            <Tooltip 
+            <Tooltip  
               contentStyle={{ 
                 backgroundColor: 'rgba(255, 255, 255, 0.95)', 
                 borderRadius: '8px',

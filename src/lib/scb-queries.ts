@@ -28,7 +28,7 @@ export const BE0101J_QUERY = {
       code: "ContentsCode",
       selection: {
         filter: "item",
-        values: ["BE0101AZ", "BE0101AU", "BE0101AV"] // Netto, In, Ut
+        values: ["BE0101AZ"] // Endast Nettoflyttning
       }
     },
     {

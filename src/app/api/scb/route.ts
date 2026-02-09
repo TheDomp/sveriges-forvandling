@@ -50,8 +50,8 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorText = await response.text();
       console.warn(`SCB API failed for ${table} with status ${response.status} ${response.statusText}: ${errorText}`);
-      // Om SCB failar, returnera mock-data för demonstration
-      return NextResponse.json(getMockData(table));
+      // Om SCB failar, kasta fel istället för mock-data
+      return NextResponse.json({ error: `SCB API Error: ${response.status}` }, { status: response.status });
     }
 
     const data = await response.json();
@@ -119,6 +119,10 @@ function processData(scbData: ScbResponse, table: string) {
 
     if (isNaN(val)) return;
 
+    // Filter: Only allow 4-digit region codes (municipalities)
+    // Excludes "00" (Riket), "01" (Län), etc.
+    if (!/^\d{4}$/.test(region)) return;
+
     // Specific logic per table
     if (table === 'BE0101J') {
        // BE0101J: We want Net Migration (BE0101AZ). 
@@ -139,10 +143,15 @@ function processData(scbData: ScbResponse, table: string) {
     }
     
     // HE0110: No filtering needed (already specific in query)
+    // But we need to convert "tkr" (thousands) to "kr"
+    let finalVal = val;
+    if (table === 'HE0110') {
+      finalVal = val * 1000;
+    }
 
     const key = `${region}-${year}`;
     const current = aggMap.get(key) || 0;
-    aggMap.set(key, current + val);
+    aggMap.set(key, current + finalVal);
   });
 
   // Transform back to SCB-like structure
@@ -164,38 +173,3 @@ function processData(scbData: ScbResponse, table: string) {
   };
 }
 
-function getMockData(table: string) {
-  // Returnera fejkdata om API:et inte svarar (vanligt utan exakt URL)
-  // Formatet efterliknar SCB:s JSON-Svar
-  const years = ["1997", "2000", "2010", "2020", "2024"];
-  const regions = ["0180", "1480", "1280", "0380"]; // Exempel
-  
-  const data = [];
-  
-  for (const region of regions) {
-    for (const year of years) {
-      let value = 0;
-      if (table === 'BE0101J') {
-         value = Math.floor(Math.random() * 5000) - 2000;
-      } else if (table === 'HE0110') {
-         value = Math.floor(Math.random() * 200000) + 150000;
-      } else if (table === 'UF0506') {
-         value = Math.floor(Math.random() * 15000) + 5000;
-      }
-      
-      data.push({
-        key: [region, year],
-        values: [value.toString()]
-      });
-    }
-  }
-
-  return {
-    columns: [
-      { code: "Region", text: "region" },
-      { code: "Tid", text: "år" },
-      { code: "Mätvariabel", text: "värde" }
-    ],
-    data: data
-  };
-}

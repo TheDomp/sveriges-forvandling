@@ -9,7 +9,7 @@ import { ScbColumn, ScbDataEntry, MunicipalityNameMap, GeoJsonData, GeoJsonFeatu
 // Dynamisk import av MapComponent med SSR avstängt
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
-  loading: () => <div className="h-96 w-full bg-gray-100 flex items-center justify-center">Laddar karta...</div>
+  loading: () => <div className="h-96 w-full bg-gray-100 flex items-center justify-center">Laddar 2D-karta...</div>
 });
 
 export default function Home() {
@@ -34,9 +34,23 @@ export default function Home() {
     fetch('/data/sweden-municipalities.geojson')
       .then(res => res.json())
       .then((data: GeoJsonData) => {
-        setGeoJsonData(data);
+        // Validate and filter features to only include real municipalities
+        // Must have a 4-digit code and a name
+        const validFeatures = data.features.filter((f: GeoJsonFeature) => {
+          const code = f.properties.id || f.properties.ref || f.properties.kod;
+          const name = f.properties.kom_namn || f.properties.name || f.properties.namn;
+          
+          // Check for valid 4-digit code and existence of name
+          return code && /^\d{4}$/.test(code) && name;
+        });
+
+        console.log(`Loaded ${validFeatures.length} valid municipalities out of ${data.features.length} features.`);
+
+        const filteredData = { ...data, features: validFeatures };
+        setGeoJsonData(filteredData);
+        
         const names: Record<string, string> = {};
-        data.features.forEach((f: GeoJsonFeature) => {
+        validFeatures.forEach((f: GeoJsonFeature) => {
           const code = f.properties.id || f.properties.ref || f.properties.kod;
           const name = f.properties.kom_namn || f.properties.name || f.properties.namn;
           if (code && name) {
@@ -87,25 +101,28 @@ export default function Home() {
           <h1 className="text-4xl font-bold mb-4 text-blue-900">Sveriges Förvandling</h1>
           <p className="mb-6 text-lg text-gray-700">Visualisering av demografi och ekonomi 1997-2024.</p>
           
-          <div className="flex gap-4 mb-6">
-            <button 
-              className={`px-4 py-2 rounded ${dataType === 'BE0101J' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600'}`}
-              onClick={() => setDataType('BE0101J')}
-            >
-              Nettoflyttning
-            </button>
-            <button 
-              className={`px-4 py-2 rounded ${dataType === 'HE0110' ? 'bg-green-600 text-white' : 'bg-white text-green-600 border border-green-600'}`}
-              onClick={() => setDataType('HE0110')}
-            >
-              Hushållsinkomst
-            </button>
-            <button 
-              className={`px-4 py-2 rounded ${dataType === 'UF0506' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600 border border-purple-600'}`}
-              onClick={() => setDataType('UF0506')}
-            >
-              Högutbildade (Antal)
-            </button>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex gap-4">
+              <button 
+                className={`px-4 py-2 rounded ${dataType === 'BE0101J' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-600'}`}
+                onClick={() => setDataType('BE0101J')}
+              >
+                Nettoflyttning
+              </button>
+              <button 
+                className={`px-4 py-2 rounded ${dataType === 'HE0110' ? 'bg-green-600 text-white' : 'bg-white text-green-600 border border-green-600'}`}
+                onClick={() => setDataType('HE0110')}
+              >
+                Hushållsinkomst
+              </button>
+              <button 
+                className={`px-4 py-2 rounded ${dataType === 'UF0506' ? 'bg-purple-600 text-white' : 'bg-white text-purple-600 border border-purple-600'}`}
+                onClick={() => setDataType('UF0506')}
+              >
+                Högutbildade (Antal)
+              </button>
+            </div>
+            
           </div>
 
           <TimeSlider 
@@ -116,11 +133,11 @@ export default function Home() {
         </div>
 
         {/* Karta */}
-        <div className="lg:col-span-2 h-[600px] bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+        <div className={`lg:col-span-2 h-[600px] rounded-xl shadow-lg overflow-hidden border border-gray-200 bg-white`}>
           <MapComponent 
             year={selectedYear} 
             data={data} 
-            columns={columns}
+            columns={columns} 
             dataType={dataType}
             selectedMunicipalities={selectedMunicipalities}
             onMunicipalitySelect={handleMunicipalitySelect}

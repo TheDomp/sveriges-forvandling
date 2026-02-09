@@ -31,16 +31,17 @@ const getColor = (d: number | null, dataType: string) => {
   if (dataType === 'BE0101J') {
     return d > 500  ? '#006d2c' :
            d > 100  ? '#31a354' :
-           d > 0    ? '#74c476' :
+           d >= 0    ? '#74c476' :
            d > -100 ? '#fcae91' :
            d > -500 ? '#fb6a4a' :
                       '#cb181d';
   } else if (dataType === 'HE0110') {
-    return d > 350000 ? '#005a32' :
-           d > 300000 ? '#238b45' :
-           d > 250000 ? '#41ab5d' :
-           d > 200000 ? '#74c476' :
-                      '#a1d99b';
+    return d > 600000 ? '#00441b' : // Darkest Green
+           d > 500000 ? '#006d2c' :
+           d > 450000 ? '#238b45' :
+           d > 400000 ? '#41ab5d' :
+           d > 350000 ? '#74c476' :
+                      '#a1d99b'; // Lightest Green
   } else {
     return d > 20000 ? '#54278f' :
            d > 10000 ? '#756bb1' :
@@ -53,7 +54,7 @@ const getColor = (d: number | null, dataType: string) => {
 const Legend = ({ dataType }: { dataType: string }) => {
   const getGrades = () => {
     if (dataType === 'BE0101J') return [500, 100, 0, -100, -500];
-    if (dataType === 'HE0110') return [350000, 300000, 250000, 200000];
+    if (dataType === 'HE0110') return [600000, 500000, 450000, 400000, 350000];
     return [20000, 10000, 5000, 2000];
   };
 
@@ -124,8 +125,19 @@ const MapComponent = ({ year, data, columns, dataType, selectedMunicipalities, o
     const f = feature as GeoJsonFeature;
     const code = f.properties.id || f.properties.ref || f.properties.kod;
     const name = f.properties.kom_namn || f.properties.name || f.properties.namn;
+    const value = getValue(code || "");
     
-    layer.bindTooltip(`${name} (${code})`, {
+    let tooltipContent = `${name}`;
+    if (value !== null) {
+      if (dataType === 'BE0101J') {
+        const sign = value > 0 ? '+' : '';
+        tooltipContent = `${name} (${sign}${value})`;
+      } else {
+        tooltipContent = `${name} (${value})`;
+      }
+    }
+    
+    layer.bindTooltip(tooltipContent, {
       permanent: false,
       direction: "top"
     });
@@ -152,6 +164,7 @@ const MapComponent = ({ year, data, columns, dataType, selectedMunicipalities, o
       />
       {geoJsonData && (
         <GeoJSON 
+          key={`${year}-${dataType}`}
           data={geoJsonData} 
           style={style} 
           onEachFeature={onEachFeature} 
